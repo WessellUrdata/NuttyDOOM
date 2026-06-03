@@ -333,38 +333,80 @@ void I_FinishUpdate (void)
     //x_offset     = 0;
     x_offset_end = ((s_Fb.xres - (SCREENWIDTH  * fb_scaling)) * s_Fb.bits_per_pixel/8) - x_offset;
 
-    /* DRAW SCREEN */
-    line_in  = (unsigned char *) I_VideoBuffer;
-    line_out = (unsigned char *) DG_ScreenBuffer;
+	// Downscale I_VideoBuffer (320x200, 8-bit palette indices) into
+	// DG_ScreenBuffer (128x64) with area-averaging, then Floyd-Steinberg
+	// dither to 1-bit black and white.
+	if (s_Fb.bits_per_pixel == 32)
+	{
+		int src_w = SCREENWIDTH;
+		int src_h = SCREENHEIGHT;
+		int dst_w = DOOMGENERIC_RESX;
+		int dst_h = DOOMGENERIC_RESY;
+		uint32_t* pixels = (uint32_t*)DG_ScreenBuffer;
+		byte* src = (byte*)I_VideoBuffer;
 
-    y = SCREENHEIGHT;
+		// Temporary buffer for grayscale values with error diffusion
+		int* gray = (int*)malloc(dst_w * dst_h * sizeof(int));
+		if (gray)
+		{
+			// Area-averaged downscale: for each output pixel, average all
+			// source pixels in the corresponding block, converting to grayscale.
+			for (int dy = 0; dy < dst_h; dy++)
+			{
+				int src_y0 = (dy * src_h) / dst_h;
+				int src_y1 = ((dy + 1) * src_h) / dst_h;
 
-    while (y--)
-    {
-        int i;
-        for (i = 0; i < fb_scaling; i++) {
-            line_out += x_offset;
-#ifdef CMAP256
-            if (fb_scaling == 1) {
-                memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
-            } else {
-                int j;
+				for (int dx = 0; dx < dst_w; dx++)
+				{
+					int src_x0 = (dx * src_w) / dst_w;
+					int src_x1 = ((dx + 1) * src_w) / dst_w;
 
-                for (j = 0; j < SCREENWIDTH; j++) {
-                    int k;
-                    for (k = 0; k < fb_scaling; k++) {
-                        line_out[j * fb_scaling + k] = line_in[j];
-                    }
-                }
-            }
-#else
-            //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
-            cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
-#endif
-            line_out += (SCREENWIDTH * fb_scaling * (s_Fb.bits_per_pixel/8)) + x_offset_end;
-        }
-        line_in += SCREENWIDTH;
-    }
+					int total = 0;
+					int count = 0;
+
+					for (int sy = src_y0; sy < src_y1; sy++)
+					{
+						for (int sx = src_x0; sx < src_x1; sx++)
+						{
+							struct color c = colors[src[sy * src_w + sx]];
+							// Luminosity, normalized to 0-255
+							total += (77 * c.r + 150 * c.g + 29 * c.b) >> 8;
+							count++;
+						}
+					}
+
+					gray[dy * dst_w + dx] = total / count;
+				}
+			}
+
+			// Floyd-Steinberg dithering on the 128x64 grayscale buffer
+			for (int dy = 0; dy < dst_h; dy++)
+			{
+				for (int dx = 0; dx < dst_w; dx++)
+				{
+					int idx = dy * dst_w + dx;
+					int oldPixel = gray[idx];
+					int newPixel = oldPixel < 128 ? 0 : 255;
+					pixels[idx] = newPixel ? 0x00FFFFFF : 0x00000000;
+
+					int error = oldPixel - newPixel;
+
+					if (dx + 1 < dst_w)
+						gray[idx + 1]              += (error * 7) / 16;
+					if (dy + 1 < dst_h)
+					{
+						if (dx > 0)
+							gray[(dy + 1) * dst_w + dx - 1] += (error * 3) / 16;
+						gray[(dy + 1) * dst_w + dx]     += (error * 5) / 16;
+						if (dx + 1 < dst_w)
+							gray[(dy + 1) * dst_w + dx + 1] += (error * 1) / 16;
+					}
+				}
+			}
+
+			free(gray);
+		}
+	}
 
 	DG_DrawFrame();
 }

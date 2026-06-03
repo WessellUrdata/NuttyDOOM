@@ -37,6 +37,10 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include "tables.h"
 #include "doomkeys.h"
 
+#include "doomstat.h"
+#include "d_player.h"
+#include "doomdef.h"
+
 #include "doomgeneric.h"
 
 #include <stdbool.h>
@@ -314,6 +318,154 @@ void I_UpdateNoBlit (void)
 {
 }
 
+// ─── 4×6 bitmap font ────────────────────────────────────────────────────
+// Each character is 6 bytes (rows). Lower 4 bits of each byte = the 4
+// column pixels (bit3=leftmost … bit0=rightmost).
+// Index: 0=' ', 1='0'…10='9', 11='A'…36='Z'.
+static const uint8_t font4x6[37][6] = {
+	{0,0,0,0,0,0},           //  0 space
+	{6,9,9,9,9,6},           //  1 0  .##. #..# #..# #..# #..# .##.
+	{2,6,2,2,2,7},           //  2 1  ..#. .##. ..#. ..#. ..#. .###
+	{6,1,2,4,8,15},          //  3 2  .##. ...# ..#. .#.. #... ####
+	{6,1,6,1,9,6},           //  4 3  .##. ...# .##. ...# #..# .##.
+	{9,9,15,1,1,1},          //  5 4  #..# #..# #### ...# ...# ...#
+	{15,8,14,1,9,6},         //  6 5  #### #... ###. ...# #..# .##.
+	{6,8,14,9,9,6},          //  7 6  .##. #... ###. #..# #..# .##.
+	{15,1,2,2,4,4},          //  8 7  #### ...# ..#. ..#. .#.. .#..
+	{6,9,6,9,9,6},           //  9 8  .##. #..# .##. #..# #..# .##.
+	{6,9,6,1,1,6},           // 10 9  .##. #..# .##. ...# ...# .##.
+	{6,9,15,9,9,9},          // 11 A  .##. #..# #### #..# #..# #..#
+	{14,9,14,9,9,14},        // 12 B  ###. #..# ###. #..# #..# ###.
+	{6,9,8,8,9,6},           // 13 C  .##. #..# #... #... #..# .##.
+	{14,9,9,9,9,14},         // 14 D  ###. #..# #..# #..# #..# ###.
+	{15,8,14,8,8,15},        // 15 E  #### #... ###. #... #... ####
+	{15,8,14,8,8,8},         // 16 F  #### #... ###. #... #... #...
+	{6,9,8,11,9,7},          // 17 G  .##. #..# #... #.## #..# .###
+	{9,9,15,9,9,9},          // 18 H  #..# #..# #### #..# #..# #..#
+	{7,2,2,2,2,7},           // 19 I  .### ..#. ..#. ..#. ..#. .###
+	{1,1,1,1,9,6},           // 20 J  ...# ...# ...# ...# #..# .##.
+	{9,10,12,12,10,9},       // 21 K  #..# #.#. ##.. ##.. #.#. #..#
+	{8,8,8,8,8,15},          // 22 L  #... #... #... #... #... ####
+	{9,15,15,9,9,9},         // 23 M  #..# #### #### #..# #..# #..#
+	{9,13,11,9,9,9},         // 24 N  #..# ##.# #.## #..# #..# #..#
+	{6,9,9,9,9,6},           // 25 O  .##. #..# #..# #..# #..# .##.
+	{14,9,14,8,8,8},         // 26 P  ###. #..# ###. #... #... #...
+	{6,9,9,13,10,5},         // 27 Q  .##. #..# #..# #.## #.#. .#.#
+	{14,9,14,10,9,9},        // 28 R  ###. #..# ###. #.#. #..# #..#
+	{6,9,8,6,1,6},           // 29 S  .##. #..# #... .##. ...# .##.
+	{7,2,2,2,2,2},           // 30 T  .### ..#. ..#. ..#. ..#. ..#.
+	{9,9,9,9,9,6},           // 31 U  #..# #..# #..# #..# #..# .##.
+	{9,9,9,9,6,6},           // 32 V  #..# #..# #..# #..# .##. .##.
+	{9,9,9,15,15,9},         // 33 W  #..# #..# #..# #### #### #..#
+	{9,9,6,6,9,9},           // 34 X  #..# #..# .##. .##. #..# #..#
+	{9,9,6,2,2,2},           // 35 Y  #..# #..# .##. ..#. ..#. ..#.
+	{15,1,2,4,8,15},         // 36 Z  #### ...# ..#. .#.. #... ####
+};
+
+// Map ASCII to font index; returns space for unknown chars.
+static int charToIdx(char c)
+{
+	if (c >= '0' && c <= '9') return 1 + (c - '0');
+	if (c >= 'A' && c <= 'Z') return 11 + (c - 'A');
+	return 0; // space
+}
+
+// Draw a single character at (x,y) on the 128x64 buffer.
+static void drawChar(uint32_t* buf, int x, int y, char c)
+{
+	int idx = charToIdx(c);
+	for (int row = 0; row < 6; row++)
+	{
+		uint8_t bits = font4x6[idx][row];
+		int py = y + row;
+		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
+		if (bits & 8) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 4) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 2) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 1) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+	}
+}
+
+// Draw a null-terminated string at (x,y).
+static void drawStr(uint32_t* buf, int x, int y, const char* s)
+{
+	while (*s)
+	{
+		drawChar(buf, x, y, *s);
+		x += 5; // 4 wide + 1 space
+		s++;
+	}
+}
+
+// Draw a decimal number at (x,y), right-aligned to width digits.
+static void drawNum(uint32_t* buf, int x, int y, int num, int width)
+{
+	char tmp[8];
+	int len = 0;
+	if (num < 0) { num = 0; }
+	do {
+		tmp[len++] = '0' + (num % 10);
+		num /= 10;
+	} while (num > 0);
+	while (len < width) tmp[len++] = '0';
+	// Draw right-aligned: most-significant digit goes leftmost
+	int dx = x - len * 5;
+	for (int i = len - 1; i >= 0; i--)
+	{
+		drawChar(buf, dx, y, tmp[i]);
+		dx += 5;
+	}
+}
+
+// ─── 128x64 sidebar HUD ─────────────────────────────────────────────────
+// Draws into the rightmost 26 columns (x=102..127) of DG_ScreenBuffer,
+// AFTER the downscale+dither but BEFORE DG_DrawFrame().
+static void DG_DrawHUD(void)
+{
+	uint32_t* buf = (uint32_t*)DG_ScreenBuffer;
+	player_t* p = &players[consoleplayer];
+	int sx = 103; // sidebar content start x
+	// 4x6 font: each char is 4px wide + 1px gap = 5px.
+	// Label (2 chars) + 3-digit number = 2*5 + 3*5 = 25px, fills 103..127.
+
+	// Row 0: Health  (e.g. "HP 100")
+	drawStr(buf, sx, 0, "HP");
+	drawNum(buf, sx + 25, 0, p->health, 3);
+
+	// Row 1: Armor  (e.g. "AR 050")
+	drawStr(buf, sx, 8, "AR");
+	drawNum(buf, sx + 25, 8, p->armorpoints, 3);
+
+	// Row 2: Ammo  (e.g. "AM 200")
+	int ammotype = weaponinfo[p->readyweapon].ammo;
+	int ammo = (ammotype == am_noammo) ? 0 : p->ammo[ammotype];
+	drawStr(buf, sx, 16, "AM");
+	drawNum(buf, sx + 25, 16, ammo, 3);
+
+	// Row 3: Weapon name  (e.g. "SHOTG" = 5 chars = 25px)
+	static const char* wnames[] = {
+		"FIST", "PISTL", "SHOTG", "CHAIN", "ROCKT", "PLASM", "BFG",
+		"SAW",  "SSG"
+	};
+	int wpn = p->readyweapon;
+	const char* wname = (wpn >= 0 && wpn < (int)(sizeof(wnames)/sizeof(wnames[0])))
+		? wnames[wpn] : "????";
+	drawStr(buf, sx, 24, wname);
+
+	// Row 4-5: Keys  (e.g. "KEYS" then "Y B R")
+	drawStr(buf, sx, 34, "KEYS");
+	int kx = sx;
+	for (int i = 0; i < 3; i++)
+	{
+		if (p->cards[i] || p->cards[i + 3])
+		{
+			static const char klabels[] = { 'Y', 'B', 'R' };
+			drawChar(buf, kx, 44, klabels[i]);
+		}
+		kx += 8;
+	}
+}
+
 //
 // I_FinishUpdate
 //
@@ -333,33 +485,33 @@ void I_FinishUpdate (void)
     //x_offset     = 0;
     x_offset_end = ((s_Fb.xres - (SCREENWIDTH  * fb_scaling)) * s_Fb.bits_per_pixel/8) - x_offset;
 
-	// Downscale I_VideoBuffer (320x200, 8-bit palette indices) into
+	// Downscale I_VideoBuffer (320x200) into the left 102 columns of
 	// DG_ScreenBuffer (128x64) with area-averaging, then Floyd-Steinberg
-	// dither to 1-bit black and white.
+	// dither to 1-bit black and white. The right 26 columns are reserved
+	// for the sidebar HUD.
 	if (s_Fb.bits_per_pixel == 32)
 	{
 		int src_w = SCREENWIDTH;
 		int src_h = SCREENHEIGHT;
-		int dst_w = DOOMGENERIC_RESX;
+		int game_w = 102;   // viewport width in output
 		int dst_h = DOOMGENERIC_RESY;
 		uint32_t* pixels = (uint32_t*)DG_ScreenBuffer;
 		byte* src = (byte*)I_VideoBuffer;
 
 		// Temporary buffer for grayscale values with error diffusion
-		int* gray = (int*)malloc(dst_w * dst_h * sizeof(int));
+		int* gray = (int*)malloc(game_w * dst_h * sizeof(int));
 		if (gray)
 		{
-			// Area-averaged downscale: for each output pixel, average all
-			// source pixels in the corresponding block, converting to grayscale.
+			// Area-averaged downscale: only fill left 102 columns
 			for (int dy = 0; dy < dst_h; dy++)
 			{
 				int src_y0 = (dy * src_h) / dst_h;
 				int src_y1 = ((dy + 1) * src_h) / dst_h;
 
-				for (int dx = 0; dx < dst_w; dx++)
+				for (int dx = 0; dx < game_w; dx++)
 				{
-					int src_x0 = (dx * src_w) / dst_w;
-					int src_x1 = ((dx + 1) * src_w) / dst_w;
+					int src_x0 = (dx * src_w) / game_w;
+					int src_x1 = ((dx + 1) * src_w) / game_w;
 
 					int total = 0;
 					int count = 0;
@@ -369,44 +521,57 @@ void I_FinishUpdate (void)
 						for (int sx = src_x0; sx < src_x1; sx++)
 						{
 							struct color c = colors[src[sy * src_w + sx]];
-							// Luminosity, normalized to 0-255
 							total += (77 * c.r + 150 * c.g + 29 * c.b) >> 8;
 							count++;
 						}
 					}
 
-					gray[dy * dst_w + dx] = total / count;
+					gray[dy * game_w + dx] = total / count;
 				}
 			}
 
-			// Floyd-Steinberg dithering on the 128x64 grayscale buffer
+			// Floyd-Steinberg dithering on the 102x64 game region
 			for (int dy = 0; dy < dst_h; dy++)
 			{
-				for (int dx = 0; dx < dst_w; dx++)
+				for (int dx = 0; dx < game_w; dx++)
 				{
-					int idx = dy * dst_w + dx;
+					int idx = dy * game_w + dx;
 					int oldPixel = gray[idx];
 					int newPixel = oldPixel < 128 ? 0 : 255;
-					pixels[idx] = newPixel ? 0x00FFFFFF : 0x00000000;
+					pixels[dy * DOOMGENERIC_RESX + dx] =
+						newPixel ? 0x00FFFFFF : 0x00000000;
 
 					int error = oldPixel - newPixel;
 
-					if (dx + 1 < dst_w)
+					if (dx + 1 < game_w)
 						gray[idx + 1]              += (error * 7) / 16;
 					if (dy + 1 < dst_h)
 					{
 						if (dx > 0)
-							gray[(dy + 1) * dst_w + dx - 1] += (error * 3) / 16;
-						gray[(dy + 1) * dst_w + dx]     += (error * 5) / 16;
-						if (dx + 1 < dst_w)
-							gray[(dy + 1) * dst_w + dx + 1] += (error * 1) / 16;
+							gray[(dy + 1) * game_w + dx - 1] += (error * 3) / 16;
+						gray[(dy + 1) * game_w + dx]     += (error * 5) / 16;
+						if (dx + 1 < game_w)
+							gray[(dy + 1) * game_w + dx + 1] += (error * 1) / 16;
 					}
 				}
 			}
 
 			free(gray);
 		}
+
+		// Clear rightmost 26 columns (sidebar area) to black
+		for (int dy = 0; dy < dst_h; dy++)
+		{
+			for (int dx = game_w; dx < DOOMGENERIC_RESX; dx++)
+			{
+				pixels[dy * DOOMGENERIC_RESX + dx] = 0x00000000;
+			}
+		}
 	}
+
+	// Draw the 128x64 overlay HUD only during gameplay
+	if (gamestate == GS_LEVEL)
+		DG_DrawHUD();
 
 	DG_DrawFrame();
 }

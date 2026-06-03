@@ -35,14 +35,15 @@
 
 // State.
 #include "doomstat.h"
+#include "st_stuff.h"
 
 
 // ?
 #define MAXWIDTH			1120
 #define MAXHEIGHT			832
 
-// status bar height at bottom of screen
-#define SBARHEIGHT		32
+// status bar height at bottom of screen; matches ST_HEIGHT
+#define SBARHEIGHT		ST_HEIGHT
 
 //
 // All drawing to the view buffer is accomplished in this file.

@@ -798,18 +798,11 @@ void ST_diffDraw(void)
 
 void ST_Drawer (boolean fullscreen, boolean refresh)
 {
-  
-    st_statusbaron = (!fullscreen) || automapactive;
-    st_firsttime = st_firsttime || refresh;
-
-    // Do red-/gold-shifts from damage/items
+    // Palette shifts for damage/item pickups still active
     ST_doPaletteStuff();
 
-    // If just after ST_Start(), refresh all
-    if (st_firsttime) ST_doRefresh();
-    // Otherwise, update as little as possible
-    else ST_diffDraw();
-
+    // Status bar rendering disabled — replaced by 128x64 overlay HUD
+    // in DG_DrawHUD() in i_video.c
 }
 
 typedef void (*load_callback_t)(char *lumpname, patch_t **variable); 

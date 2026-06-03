@@ -40,6 +40,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include "doomstat.h"
 #include "d_player.h"
 #include "doomdef.h"
+#include "hu_stuff.h"
 
 #include "doomgeneric.h"
 
@@ -367,6 +368,13 @@ static int charToIdx(char c)
 {
 	if (c >= '0' && c <= '9') return 1 + (c - '0');
 	if (c >= 'A' && c <= 'Z') return 11 + (c - 'A');
+	if (c >= 'a' && c <= 'z') return 11 + (c - 'a'); // lowercase = same as uppercase
+	if (c == '.') return 0;  // map punctuation to space
+	if (c == ',') return 0;
+	if (c == '!') return 0;
+	if (c == '?') return 0;
+	if (c == '\'') return 0;
+	if (c == ' ') return 0;
 	return 0; // space
 }
 
@@ -463,6 +471,21 @@ static void DG_DrawHUD(void)
 			drawChar(buf, kx, 44, klabels[i]);
 		}
 		kx += 8;
+	}
+
+	// Full-width message bar at the bottom (rows 56-63)
+	// Clear the message bar area to black first
+	for (int row = 56; row < 64; row++)
+	{
+		for (int col = 0; col < DOOMGENERIC_RESX; col++)
+		{
+			buf[row * DOOMGENERIC_RESX + col] = 0x00000000;
+		}
+	}
+	// Draw the message if there is one, starting from left edge
+	if (hu_lastmessage[0])
+	{
+		drawStr(buf, 1, 57, hu_lastmessage);
 	}
 }
 

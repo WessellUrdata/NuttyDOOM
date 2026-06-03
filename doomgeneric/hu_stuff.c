@@ -98,6 +98,9 @@ boolean			message_dontfuckwithme;
 static boolean		message_nottobefuckedwith;
 
 static hu_stext_t	w_message;
+
+// Latest message text, kept for the 128x64 overlay HUD
+char hu_lastmessage[HU_MAXLINELENGTH + 1] = "";
 static int		message_counter;
 
 extern int		showMessages;
@@ -383,7 +386,6 @@ void HU_Start(void)
 void HU_Drawer(void)
 {
 
-    HUlib_drawSText(&w_message);
     HUlib_drawIText(&w_chat);
     if (automapactive)
 	HUlib_drawTextLine(&w_title, false);
@@ -420,6 +422,10 @@ void HU_Ticker(void)
 	    || (plr->message && message_dontfuckwithme))
 	{
 	    HUlib_addMessageToSText(&w_message, 0, plr->message);
+
+	    // Save for the 128x64 overlay HUD
+	    M_StringCopy(hu_lastmessage, plr->message, sizeof(hu_lastmessage));
+
 	    plr->message = 0;
 	    message_on = true;
 	    message_counter = HU_MSGTIMEOUT;

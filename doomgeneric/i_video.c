@@ -425,6 +425,29 @@ static void drawNum(uint32_t* buf, int x, int y, int num, int width)
 	}
 }
 
+// ─── 4×6 sidebar icons ─────────────────────────────────────────────────
+// Drawn the same way as font chars (4px wide).
+static const uint8_t icons[4][6] = {
+	{0,0,2,7,2,0},     // 0 Heart
+	{0,9,15,15,15,6},  // 1 Shield
+	{6,6,13,13,13,15}, // 2 Bullet
+	{6,14,14,11,11,15}, // 3 Key
+};
+
+static void drawIcon(uint32_t* buf, int x, int y, int idx)
+{
+	for (int row = 0; row < 6; row++)
+	{
+		uint8_t bits = icons[idx][row];
+		int py = y + row;
+		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
+		if (bits & 8) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 4) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 2) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 1) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+	}
+}
+
 // ─── 128x64 sidebar HUD ─────────────────────────────────────────────────
 // Draws into the rightmost 26 columns (x=102..127) of DG_ScreenBuffer,
 // AFTER the downscale+dither but BEFORE DG_DrawFrame().
@@ -433,22 +456,21 @@ static void DG_DrawHUD(void)
 	uint32_t* buf = (uint32_t*)DG_ScreenBuffer;
 	player_t* p = &players[consoleplayer];
 	int sx = 103; // sidebar content start x
-	// 4x6 font: each char is 4px wide + 1px gap = 5px.
-	// Label (2 chars) + 3-digit number = 2*5 + 3*5 = 25px, fills 103..127.
+	// Icon (4px) + gap (1px) + 3-digit number (15px) = 20px.
 
-	// Row 0: Health  (e.g. "HP 100")
-	drawStr(buf, sx, 0, "HP");
-	drawNum(buf, sx + 25, 0, p->health, 3);
+	// Row 0: Health  ♥ 100
+	drawIcon(buf, sx, 0, 0);
+	drawNum(buf, sx + 20, 0, p->health, 3);
 
-	// Row 1: Armor  (e.g. "AR 050")
-	drawStr(buf, sx, 8, "AR");
-	drawNum(buf, sx + 25, 8, p->armorpoints, 3);
+	// Row 1: Armor  🛡 050
+	drawIcon(buf, sx, 8, 1);
+	drawNum(buf, sx + 20, 8, p->armorpoints, 3);
 
-	// Row 2: Ammo  (e.g. "AM 200")
+	// Row 2: Ammo  ● 200
 	int ammotype = weaponinfo[p->readyweapon].ammo;
 	int ammo = (ammotype == am_noammo) ? 0 : p->ammo[ammotype];
-	drawStr(buf, sx, 16, "AM");
-	drawNum(buf, sx + 25, 16, ammo, 3);
+	drawIcon(buf, sx, 16, 2);
+	drawNum(buf, sx + 20, 16, ammo, 3);
 
 	// Row 3: Weapon name  (e.g. "SHOTG" = 5 chars = 25px)
 	static const char* wnames[] = {
@@ -460,8 +482,8 @@ static void DG_DrawHUD(void)
 		? wnames[wpn] : "????";
 	drawStr(buf, sx, 24, wname);
 
-	// Row 4-5: Keys  (e.g. "KEYS" then "Y B R")
-	drawStr(buf, sx, 34, "KEYS");
+	// Row 4-5: Keys  (key icon then "Y B R")
+	drawIcon(buf, sx, 34, 3);
 	int kx = sx;
 	for (int i = 0; i < 3; i++)
 	{

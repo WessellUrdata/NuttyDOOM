@@ -472,10 +472,9 @@ static void DG_DrawHUD(void)
 	drawIcon(buf, sx, 16, 2);
 	drawNum(buf, sx + 20, 16, ammo, 3);
 
-	// Row 3: Weapon name  (e.g. "SHOTG" = 5 chars = 25px)
+	// Row 3: Weapon name  (e.g. "SHOTG" = 3 chars = 15px)
 	static const char* wnames[] = {
-		"FIST", "PISTL", "SHOTG", "CHAIN", "ROCKT", "PLASM", "BFG",
-		"SAW",  "SSG"
+		"FST", "PST", "SHT", "CHN", "RKT", "PSM", "BFG", "SAW",  "SSG"
 	};
 	int wpn = p->readyweapon;
 	const char* wname = (wpn >= 0 && wpn < (int)(sizeof(wnames)/sizeof(wnames[0])))

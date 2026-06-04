@@ -572,6 +572,9 @@ extern int mouseSensitivity;
 extern int screenSize;
 extern int sfxVolume;
 extern int musicVolume;
+extern int messageToPrint;
+extern char* messageString;
+extern int messageNeedsInput;
 
 // Draw a simple horizontal bar (value out of max) at (x,y).
 static void drawBar(uint32_t* buf, int x, int y, int val, int max)
@@ -623,6 +626,29 @@ static void DG_DrawMenu(void)
 	for (int y = 0; y < h; y++)
 		for (int x = 0; x < w; x++)
 			buf[y * w + x] = 0x00000000;
+
+	// Show pending confirmation messages, splitting on \n
+	if (messageToPrint && messageString)
+	{
+		const char* p = messageString;
+		int ly = 2;
+		while (*p) {
+			const char* nl = p;
+			while (*nl && *nl != '\n') nl++;
+			if (nl > p) {
+				char tmp[64];
+				int len = (nl - p < 63) ? (nl - p) : 63;
+				memcpy(tmp, p, len);
+				tmp[len] = '\0';
+				drawStr(buf, 1, ly, tmp);
+				ly += 7;
+			}
+			p = (*nl == '\n') ? nl + 1 : nl;
+		}
+		if (messageNeedsInput)
+			drawStr(buf, 1, ly, "Y/N?");
+		return;
+	}
 
 	if (!currentMenu) return;
 

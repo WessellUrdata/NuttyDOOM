@@ -500,7 +500,7 @@ static void DG_DrawHUD(void)
 
 	// Full-width message bar at the bottom (rows 56-63)
 	// Clear the message bar area to black first
-	for (int row = DOOMGENERIC_RESY - NUTTYDOOM_HUDRESY; row < DOOMGENERIC_RESY; row++)
+	for (int row = DOOMGENERIC_RESY - (CHAR_HEIGHT + 1); row < DOOMGENERIC_RESY; row++)
 	{
 		for (int col = 0; col < DOOMGENERIC_RESX; col++)
 		{
@@ -510,7 +510,7 @@ static void DG_DrawHUD(void)
 	// Draw the message if there is one, starting from left edge
 	if (hu_lastmessage[0])
 	{
-		drawStr(buf, 1, DOOMGENERIC_RESY - NUTTYDOOM_HUDRESY + 1, hu_lastmessage);
+		drawStr(buf, 1, DOOMGENERIC_RESY - (CHAR_HEIGHT + 1) + 1, hu_lastmessage);
 	}
 }
 

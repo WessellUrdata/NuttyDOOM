@@ -427,6 +427,7 @@ static void drawNum(uint32_t* buf, int x, int y, int num, int width)
 
 // ─── 4×6 sidebar icons ─────────────────────────────────────────────────
 // Drawn the same way as font chars (4px wide).
+enum { ICON_HEART, ICON_SHIELD, ICON_BULLET, ICON_KEY };
 static const uint8_t icons[4][6] = {
 	{0,0,2,7,2,0},     // 0 Heart
 	{0,9,15,15,15,6},  // 1 Shield
@@ -459,17 +460,17 @@ static void DG_DrawHUD(void)
 	// Icon (4px) + gap (1px) + 3-digit number (15px) = 20px.
 
 	// Row 0: Health  ♥ 100
-	drawIcon(buf, sx, 0, 0);
+	drawIcon(buf, sx, 0, ICON_HEART);
 	drawNum(buf, sx + 20, 0, p->health, 3);
 
 	// Row 1: Armor  🛡 050
-	drawIcon(buf, sx, 8, 1);
+	drawIcon(buf, sx, 8, ICON_SHIELD);
 	drawNum(buf, sx + 20, 8, p->armorpoints, 3);
 
 	// Row 2: Ammo  ● 200
 	int ammotype = weaponinfo[p->readyweapon].ammo;
 	int ammo = (ammotype == am_noammo) ? 0 : p->ammo[ammotype];
-	drawIcon(buf, sx, 16, 2);
+	drawIcon(buf, sx, 16, ICON_BULLET);
 	drawNum(buf, sx + 20, 16, ammo, 3);
 
 	// Row 3: Weapon name  (e.g. "SHOTG" = 3 chars = 15px)
@@ -482,7 +483,7 @@ static void DG_DrawHUD(void)
 	drawStr(buf, sx, 24, wname);
 
 	// Row 4-5: Keys  (key icon then "Y B R")
-	drawIcon(buf, sx, 34, 3);
+	drawIcon(buf, sx, 34, ICON_KEY);
 	int kx = sx;
 	for (int i = 0; i < 3; i++)
 	{

@@ -333,7 +333,7 @@ void I_UpdateNoBlit (void)
 // Each character is 6 bytes (rows). Lower 4 bits of each byte = the 4
 // column pixels (bit3=leftmost … bit0=rightmost).
 // Index: 0=' ', 1='0'…10='9', 11='A'…36='Z'.
-static const uint8_t font4x6[38][CHAR_HEIGHT] = {
+static const uint8_t font4x6[40][CHAR_HEIGHT] = {
 	{0,0,0,0,0,0},           //  0 space
 	{6,9,9,9,9,6},           //  1 0  .##. #..# #..# #..# #..# .##.
 	{2,6,2,2,2,7},           //  2 1  ..#. .##. ..#. ..#. ..#. .###
@@ -372,6 +372,8 @@ static const uint8_t font4x6[38][CHAR_HEIGHT] = {
 	{9,9,6,2,2,2},           // 35 Y  #..# #..# .##. ..#. ..#. ..#.
 	{15,1,2,4,8,15},         // 36 Z  #### ...# ..#. .#.. #... ####
 	{8,4,2,2,4,8},           // 37 >  #... .#.. ..#. ..#. .#.. #...
+	{0,0,0,0,0,1},           // 38 .  .... .... .... .... .... ...#
+	{0,0,0,0,1,3},           // 39 ,  .... .... .... .... ...# ..##
 };
 
 // Map ASCII to font index; returns space for unknown chars.
@@ -380,8 +382,8 @@ static int charToIdx(char c)
 	if (c >= '0' && c <= '9') return 1 + (c - '0');
 	if (c >= 'A' && c <= 'Z') return 11 + (c - 'A');
 	if (c >= 'a' && c <= 'z') return 11 + (c - 'a'); // lowercase = same as uppercase
-	if (c == '.') return 0;  // map unsupported punctuation to space
-	if (c == ',') return 0;
+	if (c == '.') return 38;
+	if (c == ',') return 39;
 	if (c == '!') return 0;
 	if (c == '?') return 0;
 	if (c == '\'') return 0;

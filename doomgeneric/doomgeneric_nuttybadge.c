@@ -135,9 +135,9 @@ void DG_Init(){
   window = SDL_CreateWindow("DOOM",
                             SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED,
-                            DOOMGENERIC_RESX,
-                            DOOMGENERIC_RESY,
-                            SDL_WINDOW_SHOWN
+                            DOOMGENERIC_RESX * 4,
+                            DOOMGENERIC_RESY * 4,
+                            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
                             );
 
   // Setup renderer
@@ -148,6 +148,8 @@ void DG_Init(){
   SDL_RenderPresent(renderer);
 
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, DOOMGENERIC_RESX, DOOMGENERIC_RESY);
+
+  SDL_RenderSetLogicalSize(renderer, DOOMGENERIC_RESX, DOOMGENERIC_RESY);
 }
 
 void DG_DrawFrame()

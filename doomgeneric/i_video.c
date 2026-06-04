@@ -680,6 +680,53 @@ static void DG_DrawMenu(void)
 	}
 }
 
+// ─── 128x64 intermission overlay ────────────────────────────────────────
+static void DG_DrawIntermission(void)
+{
+	uint32_t* buf = (uint32_t*)DG_ScreenBuffer;
+	int w = DOOMGENERIC_RESX;
+	int h = DOOMGENERIC_RESY;
+
+	// Clear to black
+	for (int y = 0; y < h; y++)
+		for (int x = 0; x < w; x++)
+			buf[y * w + x] = 0x00000000;
+
+	// Level names
+	extern char* mapnames[];
+	extern char* mapnames_commercial[];
+	int ep = gameepisode - 1;
+	int lev = gamemap - 1;
+	const char* lname = (gamemode == commercial)
+		? mapnames_commercial[lev]
+		: mapnames[ep * 9 + lev];
+
+	drawStr(buf, 1, 0, "LEVEL");
+	drawStr(buf, 1, 7, lname);
+
+	// Stats from wminfo
+	wbplayerstruct_t* p = &wminfo.plyr[consoleplayer];
+	drawStr(buf, 1, 21, "KILLS");
+	drawNum(buf, 55, 21, p->skills, 3);
+	drawStr(buf, 70, 21, "ITEMS");
+	drawNum(buf, 125, 21, p->sitems, 3);
+	drawStr(buf, 1, 28, "SECRET");
+	drawNum(buf, 55, 28, p->ssecret, 2);
+	drawStr(buf, 70, 28, "TIME");
+	int tics = p->stime, sec = tics / 35, min = sec / 60; sec %= 60;
+	char tb[8];
+	tb[0]='0'+(min/10); tb[1]='0'+(min%10); tb[2]=':';
+	tb[3]='0'+(sec/10); tb[4]='0'+(sec%10); tb[5]=0;
+	drawStr(buf, 100, 28, tb);
+	if (wminfo.partime) {
+		int pt = wminfo.partime; sec = pt/35; min = sec/60; sec %= 60;
+		tb[0]='0'+(min/10); tb[1]='0'+(min%10); tb[2]=':';
+		tb[3]='0'+(sec/10); tb[4]='0'+(sec%10); tb[5]=0;
+		drawStr(buf, 1, 35, "PAR");
+		drawStr(buf, 30, 35, tb);
+	}
+}
+
 //
 // I_FinishUpdate
 //
@@ -786,8 +833,10 @@ void I_FinishUpdate (void)
 		}
 	}
 
-	// Draw 128x64 overlay: menu or HUD
-	if (menuactive)
+	// Draw 128x64 overlay: intermission, menu, or HUD
+	if (gamestate == GS_INTERMISSION)
+		DG_DrawIntermission();
+	else if (menuactive)
 		DG_DrawMenu();
 	else if (gamestate == GS_LEVEL)
 		DG_DrawHUD();

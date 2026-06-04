@@ -538,7 +538,7 @@ void I_FinishUpdate (void)
 	{
 		int src_w = SCREENWIDTH;
 		int src_h = SCREENHEIGHT;
-		int game_w = 102;   // viewport width in output
+		int game_w = (gamestate == GS_LEVEL) ? 102 : 128;   // sidebar only in-game
 		int dst_h = DOOMGENERIC_RESY;
 		uint32_t* pixels = (uint32_t*)DG_ScreenBuffer;
 		byte* src = (byte*)I_VideoBuffer;
@@ -604,12 +604,15 @@ void I_FinishUpdate (void)
 			free(gray);
 		}
 
-		// Clear rightmost 26 columns (sidebar area) to black
-		for (int dy = 0; dy < dst_h; dy++)
+		// Clear rightmost 26 columns (sidebar area) to black (in-game only)
+		if (gamestate == GS_LEVEL)
 		{
-			for (int dx = game_w; dx < DOOMGENERIC_RESX; dx++)
+			for (int dy = 0; dy < dst_h; dy++)
 			{
-				pixels[dy * DOOMGENERIC_RESX + dx] = 0x00000000;
+				for (int dx = game_w; dx < DOOMGENERIC_RESX; dx++)
+				{
+					pixels[dy * DOOMGENERIC_RESX + dx] = 0x00000000;
+				}
 			}
 		}
 	}

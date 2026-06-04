@@ -41,6 +41,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include "d_player.h"
 #include "doomdef.h"
 #include "hu_stuff.h"
+#include "m_menu.h"
 
 #include "doomgeneric.h"
 
@@ -50,6 +51,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include <fcntl.h>
 
 #include <stdarg.h>
+#include <string.h>
 
 #include <sys/types.h>
 
@@ -331,7 +333,7 @@ void I_UpdateNoBlit (void)
 // Each character is 6 bytes (rows). Lower 4 bits of each byte = the 4
 // column pixels (bit3=leftmost … bit0=rightmost).
 // Index: 0=' ', 1='0'…10='9', 11='A'…36='Z'.
-static const uint8_t font4x6[37][CHAR_HEIGHT] = {
+static const uint8_t font4x6[38][CHAR_HEIGHT] = {
 	{0,0,0,0,0,0},           //  0 space
 	{6,9,9,9,9,6},           //  1 0  .##. #..# #..# #..# #..# .##.
 	{2,6,2,2,2,7},           //  2 1  ..#. .##. ..#. ..#. ..#. .###
@@ -369,6 +371,7 @@ static const uint8_t font4x6[37][CHAR_HEIGHT] = {
 	{9,9,6,6,9,9},           // 34 X  #..# #..# .##. .##. #..# #..#
 	{9,9,6,2,2,2},           // 35 Y  #..# #..# .##. ..#. ..#. ..#.
 	{15,1,2,4,8,15},         // 36 Z  #### ...# ..#. .#.. #... ####
+	{8,4,2,2,4,8},           // 37 >  #... .#.. ..#. ..#. .#.. #...
 };
 
 // Map ASCII to font index; returns space for unknown chars.
@@ -377,11 +380,12 @@ static int charToIdx(char c)
 	if (c >= '0' && c <= '9') return 1 + (c - '0');
 	if (c >= 'A' && c <= 'Z') return 11 + (c - 'A');
 	if (c >= 'a' && c <= 'z') return 11 + (c - 'a'); // lowercase = same as uppercase
-	if (c == '.') return 0;  // map punctuation to space
+	if (c == '.') return 0;  // map unsupported punctuation to space
 	if (c == ',') return 0;
 	if (c == '!') return 0;
 	if (c == '?') return 0;
 	if (c == '\'') return 0;
+	if (c == '>') return 37;
 	if (c == ' ') return 0;
 	return 0; // space
 }
@@ -514,6 +518,92 @@ static void DG_DrawHUD(void)
 	}
 }
 
+// ─── 128x64 menu overlay ────────────────────────────────────────────────
+// Map WAD lump names to readable display text.
+static const char* menuLabel(const char* lump)
+{
+	// Skip "M_" prefix if present
+	if (lump[0] == 'M' && lump[1] == '_') lump += 2;
+
+	// ── Main menu ──
+	if (!strcmp(lump, "NGAME"))  return "NEW GAME";
+	if (!strcmp(lump, "OPTION")) return "OPTIONS";
+	if (!strcmp(lump, "LOADG"))  return "LOAD GAME";
+	if (!strcmp(lump, "SAVEG"))  return "SAVE GAME";
+	if (!strcmp(lump, "RDTHIS")) return "READ THIS";
+	if (!strcmp(lump, "QUITG"))  return "QUIT GAME";
+
+	// ── Episode select ──
+	if (!strcmp(lump, "EPI1"))   return "KNEE-DEEP";
+	if (!strcmp(lump, "EPI2"))   return "THE SHORES";
+	if (!strcmp(lump, "EPI3"))   return "INFERNO";
+	if (!strcmp(lump, "EPI4"))   return "THY FLESH";
+
+	// ── Difficulty ──
+	if (!strcmp(lump, "JKILL"))  return "I'M TOO YOUNG";
+	if (!strcmp(lump, "ROUGH"))  return "NOT TOO ROUGH";
+	if (!strcmp(lump, "HURT"))   return "HURT ME PLENTY";
+	if (!strcmp(lump, "ULTRA"))  return "ULTRA-VIOLENCE";
+	if (!strcmp(lump, "NMARE"))  return "NIGHTMARE";
+
+	// ── Options ──
+	if (!strcmp(lump, "ENDGAM")) return "END GAME";
+	if (!strcmp(lump, "MESSG"))  return "MESSAGES";
+	if (!strcmp(lump, "DETAIL")) return "DETAIL";
+	if (!strcmp(lump, "SCRNSZ")) return "SCREEN SIZE";
+	if (!strcmp(lump, "MSENS"))  return "MOUSE SENSE";
+	if (!strcmp(lump, "SVOL"))   return "SOUND VOLUME";
+
+	// ── Sound submenu ──
+	if (!strcmp(lump, "SFXVOL")) return "SFX VOLUME";
+	if (!strcmp(lump, "MUSVOL")) return "MUSIC VOLUME";
+
+	return lump; // fallback: show raw name
+}
+
+// Replaces the original DOOM menu rendering with our own 4x6 font.
+static void DG_DrawMenu(void)
+{
+	uint32_t* buf = (uint32_t*)DG_ScreenBuffer;
+	int w = DOOMGENERIC_RESX;
+	int h = DOOMGENERIC_RESY;
+
+	// Clear full screen to black
+	for (int y = 0; y < h; y++)
+		for (int x = 0; x < w; x++)
+			buf[y * w + x] = 0x00000000;
+
+	if (!currentMenu) return;
+
+	// Title for known menus based on their item count/location
+	const char* title = NULL;
+	if (currentMenu->x == 97)  title = "DOOM";
+	if (currentMenu->x == 48 && currentMenu->y == 63) title = "NEW GAME";
+	if (currentMenu->x == 60)  title = "OPTIONS";
+	if (currentMenu->x == 80)  title = "LOAD/SAVE";
+	if (title) drawStr(buf, 1, 0, title);
+
+	// Menu items
+	int y = title ? 8 : 2;
+	for (int i = 0; i < currentMenu->numitems; i++)
+	{
+		const char* name = currentMenu->menuitems[i].name;
+		if (name[0])
+		{
+			if (i == itemOn)
+			{
+				drawStr(buf, 1, y, ">");
+				drawStr(buf, 8, y, menuLabel(name));
+			}
+			else
+			{
+				drawStr(buf, 8, y, menuLabel(name));
+			}
+			y += 7;
+		}
+	}
+}
+
 //
 // I_FinishUpdate
 //
@@ -620,8 +710,10 @@ void I_FinishUpdate (void)
 		}
 	}
 
-	// Draw the 128x64 overlay HUD only during gameplay
-	if (gamestate == GS_LEVEL)
+	// Draw 128x64 overlay: menu or HUD
+	if (menuactive)
+		DG_DrawMenu();
+	else if (gamestate == GS_LEVEL)
 		DG_DrawHUD();
 
 	DG_DrawFrame();

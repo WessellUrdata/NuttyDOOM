@@ -22,6 +22,7 @@
 
 
 
+#include "doomtype.h"
 #include "d_event.h"
 
 //
@@ -55,6 +56,31 @@ void M_StartControlPanel (void);
 
 extern int detailLevel;
 extern int screenblocks;
+
+// Menu type definitions (shared with m_menu.c)
+typedef struct
+{
+    short	status;
+    char	name[10];
+    void	(*routine)(int choice);
+    char	alphaKey;
+} menuitem_t;
+
+typedef struct menu_s
+{
+    short		numitems;
+    struct menu_s*	prevMenu;
+    menuitem_t*		menuitems;
+    void		(*routine)();
+    short		x;
+    short		y;
+    short		lastOn;
+} menu_t;
+
+// Menu state for 128x64 overlay rendering
+extern boolean menuactive;
+extern menu_t* currentMenu;
+extern short itemOn;
 
 
 

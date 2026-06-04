@@ -412,6 +412,7 @@ void HU_Ticker(void)
     {
 	message_on = false;
 	message_nottobefuckedwith = false;
+	hu_lastmessage[0] = '\0'; // clear for 128x64 HUD
     }
 
     if (showMessages || message_dontfuckwithme)

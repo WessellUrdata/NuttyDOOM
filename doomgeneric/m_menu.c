@@ -1139,10 +1139,8 @@ static char *M_SelectEndMessage(void)
 
 void M_QuitDOOM(int choice)
 {
-    DEH_snprintf(endstring, sizeof(endstring), "%s\n\n" DOSY,
-                 DEH_String(M_SelectEndMessage()));
-
-    M_StartMessage(endstring,M_QuitResponse,true);
+    // Skip confirmation dialog for 128x64 display
+    M_QuitResponse(key_menu_confirm);
 }
 
 

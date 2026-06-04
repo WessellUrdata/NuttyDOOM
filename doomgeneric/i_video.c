@@ -561,6 +561,53 @@ static const char* menuLabel(const char* lump)
 	return lump; // fallback: show raw name
 }
 
+// Externs for submenu values
+extern int showMessages;
+extern int detailLevel;
+extern int mouseSensitivity;
+extern int screenSize;
+extern int sfxVolume;
+extern int musicVolume;
+
+// Draw a simple horizontal bar (value out of max) at (x,y).
+static void drawBar(uint32_t* buf, int x, int y, int val, int max)
+{
+	int bw = 20; // bar width in pixels
+	int filled = (val * bw + max / 2) / max;
+	for (int row = 2; row < 5; row++)
+	{
+		int py = y + row;
+		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
+		for (int col = 0; col < bw; col++)
+		{
+			int px = x + col;
+			if (px >= DOOMGENERIC_RESX) break;
+			if (col < filled)
+				buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF;
+			else
+				buf[py * DOOMGENERIC_RESX + px] = 0x00000000;
+		}
+	}
+}
+
+// Draw current value for status==2 items (toggles/sliders).
+static void drawMenuValue(uint32_t* buf, int x, int y, int i)
+{
+	const char* name = currentMenu->menuitems[i].name;
+	if (!strcmp(name, "M_MESSG"))
+		drawStr(buf, x, y, showMessages ? "ON" : "OFF");
+	else if (!strcmp(name, "M_DETAIL"))
+		drawStr(buf, x, y, detailLevel ? "LOW" : "HIGH");
+	else if (!strcmp(name, "M_SCRNSZ"))
+		drawBar(buf, x, y, screenSize, 8);
+	else if (!strcmp(name, "M_MSENS"))
+		drawBar(buf, x, y, mouseSensitivity, 9);
+	else if (!strcmp(name, "M_SFXVOL"))
+		drawBar(buf, x, y, sfxVolume, 15);
+	else if (!strcmp(name, "M_MUSVOL"))
+		drawBar(buf, x, y, musicVolume, 15);
+}
+
 // Replaces the original DOOM menu rendering with our own 4x6 font.
 static void DG_DrawMenu(void)
 {
@@ -580,7 +627,8 @@ static void DG_DrawMenu(void)
 	if (currentMenu->x == 97)  title = "DOOM";
 	if (currentMenu->x == 48 && currentMenu->y == 63) title = "NEW GAME";
 	if (currentMenu->x == 60)  title = "OPTIONS";
-	if (currentMenu->x == 80)  title = "LOAD/SAVE";
+	if (currentMenu->x == 80 && currentMenu->numitems == 6) title = "LOAD GAME";
+	if (currentMenu->x == 80 && currentMenu->numitems == 4) title = "SOUND";
 	if (title) drawStr(buf, 1, 0, title);
 
 	// Menu items
@@ -591,14 +639,13 @@ static void DG_DrawMenu(void)
 		if (name[0])
 		{
 			if (i == itemOn)
-			{
 				drawStr(buf, 1, y, ">");
-				drawStr(buf, 8, y, menuLabel(name));
-			}
-			else
-			{
-				drawStr(buf, 8, y, menuLabel(name));
-			}
+			drawStr(buf, 8, y, menuLabel(name));
+
+			// Draw current value for sliders/toggles
+			if (currentMenu->menuitems[i].status == 2)
+				drawMenuValue(buf, 100, y, i);
+
 			y += 7;
 		}
 	}

@@ -833,11 +833,11 @@ void I_FinishUpdate (void)
 		}
 	}
 
-	// Draw 128x64 overlay: intermission, menu, or HUD
-	if (gamestate == GS_INTERMISSION)
-		DG_DrawIntermission();
-	else if (menuactive)
+	// Draw 128x64 overlay: menu (highest priority), then intermission, then HUD
+	if (menuactive)
 		DG_DrawMenu();
+	else if (gamestate == GS_INTERMISSION)
+		DG_DrawIntermission();
 	else if (gamestate == GS_LEVEL)
 		DG_DrawHUD();
 

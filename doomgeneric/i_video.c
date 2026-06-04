@@ -453,7 +453,7 @@ static void drawIcon(uint32_t* buf, int x, int y, int idx)
 }
 
 // ─── 128x64 sidebar HUD ─────────────────────────────────────────────────
-// Draws into the rightmost 26 columns (x=102..127) of DG_ScreenBuffer,
+// Draws into the rightmost columns of DG_ScreenBuffer,
 // AFTER the downscale+dither but BEFORE DG_DrawFrame().
 static void DG_DrawHUD(void)
 {
@@ -478,29 +478,28 @@ static void DG_DrawHUD(void)
 
 	// Row 3: Weapon name  (e.g. "SHOTG" = 3 chars = 15px)
 	static const char* wnames[] = {
-		"FST", "PST", "SHT", "CHN", "RKT", "PSM", "BFG", "SAW",  "SSG"
+		"FIST", "PSTL", "SHOT", "CHAI", "ROKT", "PLSM", "BFG9", "CSAW",  "SSHG"
 	};
 	int wpn = p->readyweapon;
 	const char* wname = (wpn >= 0 && wpn < (int)(sizeof(wnames)/sizeof(wnames[0])))
 		? wnames[wpn] : "????";
 	drawStr(buf, sx, (CHAR_HEIGHT + 1)*3, wname);
 
-	// Row 4-5: Keys  (key icon then "Y B R")
+	// Row 4: Keys  (key icon then "Y B R")
 	drawIcon(buf, sx, (CHAR_HEIGHT + 1)*4, ICON_KEY);
-	int kx = sx;
 	for (int i = 0; i < 3; i++)
 	{
 		if (p->cards[i] || p->cards[i + 3])
 		{
 			static const char klabels[] = { 'Y', 'B', 'R' };
-			drawChar(buf, kx, (CHAR_HEIGHT + 1)*4 + 1, klabels[i]);
+			// I have no idea why this 5 cannot be CHAR_WIDTH+1, it's so weird
+			drawChar(buf, sx + 5*(i+1), (CHAR_HEIGHT + 1)*4, klabels[i]);
 		}
-		kx += 8;
 	}
 
 	// Full-width message bar at the bottom (rows 56-63)
 	// Clear the message bar area to black first
-	for (int row = DOOMGENERIC_RESY - (CHAR_HEIGHT + 1); row < DOOMGENERIC_RESY; row++)
+	for (int row = DOOMGENERIC_RESY - CHAR_HEIGHT; row < DOOMGENERIC_RESY; row++)
 	{
 		for (int col = 0; col < DOOMGENERIC_RESX; col++)
 		{
@@ -511,7 +510,7 @@ static void DG_DrawHUD(void)
 	const char* msg = HU_CurrentMessage();
 	if (msg)
 	{
-		drawStr(buf, 1, DOOMGENERIC_RESY - (CHAR_HEIGHT + 1) + 1, msg);
+		drawStr(buf, 1, DOOMGENERIC_RESY - CHAR_HEIGHT, msg);
 	}
 }
 
@@ -579,7 +578,7 @@ void I_FinishUpdate (void)
 				}
 			}
 
-			// Floyd-Steinberg dithering on the 102x64 game region
+			// Floyd-Steinberg dithering on game region
 			for (int dy = 0; dy < dst_h; dy++)
 			{
 				for (int dx = 0; dx < game_w; dx++)
@@ -608,7 +607,7 @@ void I_FinishUpdate (void)
 			free(gray);
 		}
 
-		// Clear rightmost 26 columns (sidebar area) to black (in-game only)
+		// Clear rightmost HUD columns (sidebar area) to black (in-game only)
 		if (gamestate == GS_LEVEL)
 		{
 			for (int dy = 0; dy < dst_h; dy++)

@@ -99,8 +99,7 @@ static boolean		message_nottobefuckedwith;
 
 static hu_stext_t	w_message;
 
-// Latest message text, kept for the 128x64 overlay HUD
-char hu_lastmessage[HU_MAXLINELENGTH + 1] = "";
+
 static int		message_counter;
 
 extern int		showMessages;
@@ -383,6 +382,14 @@ void HU_Start(void)
 
 }
 
+// Return the current message text, or NULL if no message is active.
+const char* HU_CurrentMessage(void)
+{
+    if (message_on)
+        return w_message.l[w_message.cl].l;
+    return NULL;
+}
+
 void HU_Drawer(void)
 {
 
@@ -412,7 +419,6 @@ void HU_Ticker(void)
     {
 	message_on = false;
 	message_nottobefuckedwith = false;
-	hu_lastmessage[0] = '\0'; // clear for 128x64 HUD
     }
 
     if (showMessages || message_dontfuckwithme)
@@ -423,9 +429,6 @@ void HU_Ticker(void)
 	    || (plr->message && message_dontfuckwithme))
 	{
 	    HUlib_addMessageToSText(&w_message, 0, plr->message);
-
-	    // Save for the 128x64 overlay HUD
-	    M_StringCopy(hu_lastmessage, plr->message, sizeof(hu_lastmessage));
 
 	    plr->message = 0;
 	    message_on = true;

@@ -508,9 +508,10 @@ static void DG_DrawHUD(void)
 		}
 	}
 	// Draw the message if there is one, starting from left edge
-	if (hu_lastmessage[0])
+	const char* msg = HU_CurrentMessage();
+	if (msg)
 	{
-		drawStr(buf, 1, DOOMGENERIC_RESY - (CHAR_HEIGHT + 1) + 1, hu_lastmessage);
+		drawStr(buf, 1, DOOMGENERIC_RESY - (CHAR_HEIGHT + 1) + 1, msg);
 	}
 }
 

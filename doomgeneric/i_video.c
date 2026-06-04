@@ -319,11 +319,19 @@ void I_UpdateNoBlit (void)
 {
 }
 
+#ifndef CHAR_WIDTH
+#define CHAR_WIDTH 4
+#endif // CHAR_WIDTH
+
+#ifndef CHAR_HEIGHT
+#define CHAR_HEIGHT 6
+#endif // CHAR_HEIGHT
+
 // ─── 4×6 bitmap font ────────────────────────────────────────────────────
 // Each character is 6 bytes (rows). Lower 4 bits of each byte = the 4
 // column pixels (bit3=leftmost … bit0=rightmost).
 // Index: 0=' ', 1='0'…10='9', 11='A'…36='Z'.
-static const uint8_t font4x6[37][6] = {
+static const uint8_t font4x6[37][CHAR_HEIGHT] = {
 	{0,0,0,0,0,0},           //  0 space
 	{6,9,9,9,9,6},           //  1 0  .##. #..# #..# #..# #..# .##.
 	{2,6,2,2,2,7},           //  2 1  ..#. .##. ..#. ..#. ..#. .###
@@ -382,15 +390,15 @@ static int charToIdx(char c)
 static void drawChar(uint32_t* buf, int x, int y, char c)
 {
 	int idx = charToIdx(c);
-	for (int row = 0; row < 6; row++)
+	for (int row = 0; row < CHAR_HEIGHT; row++)
 	{
 		uint8_t bits = font4x6[idx][row];
 		int py = y + row;
 		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
-		if (bits & 8) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 4) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 2) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 1) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b1000) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0100) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0010) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0001) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
 	}
 }
 
@@ -437,15 +445,15 @@ static const uint8_t icons[4][6] = {
 
 static void drawIcon(uint32_t* buf, int x, int y, int idx)
 {
-	for (int row = 0; row < 6; row++)
+	for (int row = 0; row < CHAR_HEIGHT; row++)
 	{
 		uint8_t bits = icons[idx][row];
 		int py = y + row;
 		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
-		if (bits & 8) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 4) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 2) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 1) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b1000) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0100) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0010) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
+		if (bits & 0b0001) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
 	}
 }
 
@@ -464,14 +472,14 @@ static void DG_DrawHUD(void)
 	drawNum(buf, sx + 20, 0, p->health, 3);
 
 	// Row 1: Armor  🛡 050
-	drawIcon(buf, sx, 8, ICON_SHIELD);
-	drawNum(buf, sx + 20, 8, p->armorpoints, 3);
+	drawIcon(buf, sx, (CHAR_HEIGHT + 1), ICON_SHIELD);
+	drawNum(buf, sx + 20, (CHAR_HEIGHT + 1)*1, p->armorpoints, 3);
 
 	// Row 2: Ammo  ● 200
 	int ammotype = weaponinfo[p->readyweapon].ammo;
 	int ammo = (ammotype == am_noammo) ? 0 : p->ammo[ammotype];
-	drawIcon(buf, sx, 16, ICON_BULLET);
-	drawNum(buf, sx + 20, 16, ammo, 3);
+	drawIcon(buf, sx, (CHAR_HEIGHT + 1)*2, ICON_BULLET);
+	drawNum(buf, sx + 20, (CHAR_HEIGHT + 1)*2, ammo, 3);
 
 	// Row 3: Weapon name  (e.g. "SHOTG" = 3 chars = 15px)
 	static const char* wnames[] = {
@@ -480,17 +488,17 @@ static void DG_DrawHUD(void)
 	int wpn = p->readyweapon;
 	const char* wname = (wpn >= 0 && wpn < (int)(sizeof(wnames)/sizeof(wnames[0])))
 		? wnames[wpn] : "????";
-	drawStr(buf, sx, 24, wname);
+	drawStr(buf, sx, (CHAR_HEIGHT + 1)*3, wname);
 
 	// Row 4-5: Keys  (key icon then "Y B R")
-	drawIcon(buf, sx, 34, ICON_KEY);
+	drawIcon(buf, sx, (CHAR_HEIGHT + 1)*4, ICON_KEY);
 	int kx = sx;
 	for (int i = 0; i < 3; i++)
 	{
 		if (p->cards[i] || p->cards[i + 3])
 		{
 			static const char klabels[] = { 'Y', 'B', 'R' };
-			drawChar(buf, kx, 44, klabels[i]);
+			drawChar(buf, kx, (CHAR_HEIGHT + 1)*4 + 1, klabels[i]);
 		}
 		kx += 8;
 	}

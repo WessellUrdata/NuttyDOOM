@@ -455,7 +455,7 @@ static void DG_DrawHUD(void)
 {
 	uint32_t* buf = (uint32_t*)DG_ScreenBuffer;
 	player_t* p = &players[consoleplayer];
-	int sx = 103; // sidebar content start x
+	int sx = DOOMGENERIC_RESX - NUTTYDOOM_HUDRESX + 1; // sidebar content start x+1
 	// Icon (4px) + gap (1px) + 3-digit number (15px) = 20px.
 
 	// Row 0: Health  ♥ 100
@@ -497,7 +497,7 @@ static void DG_DrawHUD(void)
 
 	// Full-width message bar at the bottom (rows 56-63)
 	// Clear the message bar area to black first
-	for (int row = 56; row < 64; row++)
+	for (int row = DOOMGENERIC_RESY - NUTTYDOOM_HUDRESY; row < DOOMGENERIC_RESY; row++)
 	{
 		for (int col = 0; col < DOOMGENERIC_RESX; col++)
 		{
@@ -507,7 +507,7 @@ static void DG_DrawHUD(void)
 	// Draw the message if there is one, starting from left edge
 	if (hu_lastmessage[0])
 	{
-		drawStr(buf, 1, 57, hu_lastmessage);
+		drawStr(buf, 1, DOOMGENERIC_RESY - NUTTYDOOM_HUDRESY + 1, hu_lastmessage);
 	}
 }
 
@@ -538,7 +538,7 @@ void I_FinishUpdate (void)
 	{
 		int src_w = SCREENWIDTH;
 		int src_h = SCREENHEIGHT;
-		int game_w = (gamestate == GS_LEVEL) ? 102 : 128;   // sidebar only in-game
+		int game_w = (gamestate == GS_LEVEL) ? DOOMGENERIC_RESX - NUTTYDOOM_HUDRESX : DOOMGENERIC_RESX;   // sidebar only in-game
 		int dst_h = DOOMGENERIC_RESY;
 		uint32_t* pixels = (uint32_t*)DG_ScreenBuffer;
 		byte* src = (byte*)I_VideoBuffer;

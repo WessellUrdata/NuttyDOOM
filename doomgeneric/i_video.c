@@ -386,13 +386,12 @@ static int charToIdx(char c)
 	return 0; // space
 }
 
-// Draw a single character at (x,y) on the 128x64 buffer.
-static void drawChar(uint32_t* buf, int x, int y, char c)
+// Draw a single glyph (6 rows, 4 bits per row) at (x,y).
+static void drawGlyph(uint32_t* buf, int x, int y, const uint8_t glyph[CHAR_HEIGHT])
 {
-	int idx = charToIdx(c);
 	for (int row = 0; row < CHAR_HEIGHT; row++)
 	{
-		uint8_t bits = font4x6[idx][row];
+		uint8_t bits = glyph[row];
 		int py = y + row;
 		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
 		if (bits & 0b1000) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
@@ -400,6 +399,11 @@ static void drawChar(uint32_t* buf, int x, int y, char c)
 		if (bits & 0b0010) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
 		if (bits & 0b0001) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
 	}
+}
+
+static void drawChar(uint32_t* buf, int x, int y, char c)
+{
+	drawGlyph(buf, x, y, font4x6[charToIdx(c)]);
 }
 
 // Draw a null-terminated string at (x,y).
@@ -445,16 +449,7 @@ static const uint8_t icons[4][6] = {
 
 static void drawIcon(uint32_t* buf, int x, int y, int idx)
 {
-	for (int row = 0; row < CHAR_HEIGHT; row++)
-	{
-		uint8_t bits = icons[idx][row];
-		int py = y + row;
-		if (py < 0 || py >= DOOMGENERIC_RESY) continue;
-		if (bits & 0b1000) { int px = x;     if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 0b0100) { int px = x + 1; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 0b0010) { int px = x + 2; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-		if (bits & 0b0001) { int px = x + 3; if (px >= 0 && px < DOOMGENERIC_RESX) buf[py * DOOMGENERIC_RESX + px] = 0x00FFFFFF; }
-	}
+	drawGlyph(buf, x, y, icons[idx]);
 }
 
 // ─── 128x64 sidebar HUD ─────────────────────────────────────────────────

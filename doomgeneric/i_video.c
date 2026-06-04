@@ -333,7 +333,7 @@ void I_UpdateNoBlit (void)
 // Each character is 6 bytes (rows). Lower 4 bits of each byte = the 4
 // column pixels (bit3=leftmost … bit0=rightmost).
 // Index: 0=' ', 1='0'…10='9', 11='A'…36='Z'.
-static const uint8_t font4x6[40][CHAR_HEIGHT] = {
+static const uint8_t font4x6[41][CHAR_HEIGHT] = {
 	{0,0,0,0,0,0},           //  0 space
 	{6,9,9,9,9,6},           //  1 0  .##. #..# #..# #..# #..# .##.
 	{2,6,2,2,2,7},           //  2 1  ..#. .##. ..#. ..#. ..#. .###
@@ -374,6 +374,7 @@ static const uint8_t font4x6[40][CHAR_HEIGHT] = {
 	{8,4,2,2,4,8},           // 37 >  #... .#.. ..#. ..#. .#.. #...
 	{0,0,0,0,0,1},           // 38 .  .... .... .... .... .... ...#
 	{0,0,0,0,1,3},           // 39 ,  .... .... .... .... ...# ..##
+	{0,0,2,0,2,0},           // 40 :  .... .... ..#. .... ..#. ....
 };
 
 // Map ASCII to font index; returns space for unknown chars.
@@ -387,6 +388,7 @@ static int charToIdx(char c)
 	if (c == '!') return 0;
 	if (c == '?') return 0;
 	if (c == '\'') return 0;
+	if (c == ':') return 40;
 	if (c == '>') return 37;
 	if (c == ' ') return 0;
 	return 0; // space
@@ -597,9 +599,9 @@ static void drawMenuValue(uint32_t* buf, int x, int y, int i)
 {
 	const char* name = currentMenu->menuitems[i].name;
 	if (!strcmp(name, "M_MESSG"))
-		drawStr(buf, x, y, showMessages ? "ON" : "OFF");
+		drawStr(buf, x, y, showMessages ? ":ON" : ":OFF");
 	else if (!strcmp(name, "M_DETAIL"))
-		drawStr(buf, x, y, detailLevel ? "LOW" : "HIGH");
+		drawStr(buf, x, y, detailLevel ? ":LOW" : ":HIGH");
 	else if (!strcmp(name, "M_SCRNSZ"))
 		drawBar(buf, x, y, screenSize, 8);
 	else if (!strcmp(name, "M_MSENS"))
@@ -644,9 +646,8 @@ static void DG_DrawMenu(void)
 				drawStr(buf, 1, y, ">");
 			drawStr(buf, 8, y, menuLabel(name));
 
-			// Draw current value for sliders/toggles
-			if (currentMenu->menuitems[i].status == 2)
-				drawMenuValue(buf, 100, y, i);
+			// Draw current value for toggles/sliders
+			drawMenuValue(buf, 100, y, i);
 
 			y += 7;
 		}
